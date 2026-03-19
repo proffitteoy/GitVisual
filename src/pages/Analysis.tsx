@@ -205,6 +205,22 @@ function pruneFunctionSubtree(node: FunctionNode, remainingLevels: number): Func
   };
 }
 
+function inheritModuleForSubtree(
+  node: FunctionNode,
+  parentModuleId?: string | null,
+  parentModuleName?: string | null,
+): FunctionNode {
+  const moduleId = node.moduleId ?? parentModuleId ?? null;
+  const moduleName = node.moduleName ?? parentModuleName ?? null;
+
+  return {
+    ...node,
+    moduleId,
+    moduleName,
+    children: node.children?.map((child) => inheritModuleForSubtree(child, moduleId, moduleName)),
+  };
+}
+
 function updateNodeInTree(
   node: FunctionNode,
   nodeId: string,
@@ -1013,10 +1029,14 @@ export const Analysis: React.FC = () => {
         remainingLevels: manualDrillLevels,
       });
 
-      const finalizedNode: FunctionNode = {
-        ...analyzedNode,
-        manualDrillAvailable: false,
-      };
+      const finalizedNode = inheritModuleForSubtree(
+        {
+          ...analyzedNode,
+          manualDrillAvailable: false,
+        },
+        targetNode.moduleId,
+        targetNode.moduleName,
+      );
       const nextTree = commitFunctionTreeNode(targetNode.id, () => finalizedNode);
 
       addLog(
